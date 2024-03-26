@@ -42,19 +42,6 @@ func (b messageBroker) SendGood(good models.Good) error {
 func (b messageBroker) SendGoods(goods []models.Good) error {
 	now := time.Now()
 	for _, v := range goods {
-		// v.Created_at = now
-
-		// var encodedGood bytes.Buffer
-		// enc := gob.NewEncoder(&encodedGood)
-		// err := enc.Encode(v)
-		// if err != nil {
-		// 	return err
-		// }
-
-		// err = b.nats.Publish(GOODS_CHANNEL, encodedGood.Bytes())
-		// if err != nil {
-		// 	return err
-		// }
 		v.Created_at = now
 		go b.SendGood(v)
 	}

@@ -8,7 +8,6 @@ import (
 )
 
 func NewConnection(config *config.AppConfig) (*sqlx.DB, error) {
-	//log.Printf("Connecting to database...: %v", config.Data.Postgres.URL)
 	conn, err := sqlx.Connect("pgx", config.Data.Postgres.URL)
 	if err != nil {
 		return nil, err

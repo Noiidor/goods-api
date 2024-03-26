@@ -32,7 +32,7 @@ func main() {
 
 	db, err := postgres.NewConnection(&config)
 	if err != nil {
-		log.Fatalf("Could not establish persistance database connection: %v", err.Error())
+		log.Fatalf("Could not establish persistance database connection: %v", err)
 	}
 	defer db.Close()
 

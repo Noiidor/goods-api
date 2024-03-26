@@ -38,7 +38,7 @@ func (c clickhouseAnalytics) InsertBatch(goods []models.Good) error {
 
 	for _, v := range goods { // Сюда по-хорошему прикрутить sql санитайзер
 		query += fmt.Sprintf("(%v, %v, '%v', '%v', %v, %v, '%v')\n", v.ID, v.Project_id, v.Name, v.Description, v.Priority, v.Removed, v.Created_at.Format("2006-01-02 15:04:05"))
-	}
+	} // да, выглядит убого
 
 	_, err := c.db.Exec(query)
 	if err != nil {

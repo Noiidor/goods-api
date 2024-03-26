@@ -11,7 +11,7 @@ func HandleAsyncErrors() {
 			if err == nil {
 				continue
 			}
-			log.Printf("ASYNC ERROR: %v", err.Error())
+			log.Printf("ASYNC ERROR: %v", err)
 		}
 	}()
 }
