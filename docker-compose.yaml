@@ -1,0 +1,113 @@
+version: "3.8"
+
+name: goods-service
+
+volumes:
+  pgdata:
+    name: pgdata
+  chdata:
+    name: chdata
+  redisdata:
+    name: redisdata
+  
+services:
+  postgres:
+    image: postgres:16.2-alpine3.19
+    container_name: goods-pg
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - pgdata:/var/lib/postgres/data
+    ports:
+      - ${POSTGRES_PORT}:5432
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+
+
+  postgres-migrate:
+    image: migrate/migrate
+    container_name: pg-migrate
+    restart: on-failure:2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["-database", "${POSTGRES_URL}", "-path", "./migrations", "up" ]
+    volumes:
+      - ./migrations/postgres:/migrations
+    
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest-alpine
+    container_name: goods-ch
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${CH_HTTP_PORT}/ping | grep -q 'Ok' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - chdata:/var/lib/clickhouse
+    ports:
+      - ${CH_HTTP_PORT}:8123
+      - ${CH_PORT}:9000
+
+  clickhouse-migrate:
+    image: migrate/migrate
+    container_name: ch-migrate
+    restart: on-failure:2
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    command: [ "-database", "${CLICKHOUSE_URL}", "-path", "./migrations", "up" ]
+    volumes:
+      - ./migrations/clickhouse:/migrations
+
+  redis:
+    image: redis:alpine3.19
+    container_name: goods-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - redisdata:/data
+    ports:
+      - ${REDIS_PORT}:6379
+
+  nats:
+    image: nats:alpine3.19
+    container_name: goods-nats
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz | grep -q 'ok' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    ports:
+      - ${NATS_PORT}:4222
+      - ${NATS_HTTP_PORT}:8222
+      
+  goods:
+    build: .
+    container_name: goods-api
+    restart: unless-stopped
+    command: ["/goods-api"]
+    env_file: .env
+    ports:
+      - ${APP_PORT}:8080
+    depends_on:
+      clickhouse-migrate:
+        condition: service_completed_successfully
+      postgres-migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
